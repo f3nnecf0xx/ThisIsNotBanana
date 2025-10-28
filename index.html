@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>動画配信サイト</title>
+  <style>
+    #videopage div{
+      max-width: 900px;
+      margin: 16px auto;
+      padding: 12px;
+      box-sizing: border-box;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: system-ui, -apple-system, "Helvetica Neue", Arial;
+    }
+    #videopage  div img {
+      width: 160px;             /* 固定幅のサムネイル */
+      height: 90px;
+      object-fit: cover;
+      border-radius: 6px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    #videopage div > :first-child {
+      /* "something" 部分 (テキスト) を左に寄せる */
+      flex: 1;
+      font-size: 16px;
+      color: #111;
+    }
+    /* チャンネル全体の配置 */
+    #channel {
+      display: block;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    
+    
+  </style>
+</head>
+
+<body>
+  <div id="toppage">
+  <div id="channel"> </div>
+  </div>
+  <div id="videopage"></div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/0.5.14/hls.min.js"></script>
+  <script> 
+    async function getjsonmap() {
+      const origin = location.origin
+      const res = await fetch(origin+"/jsonmap.txt");
+      const jsonmap = await res.text(); 
+      return jsonmap;
+    };
+    async function getjson(jsonmap) {
+        const origin = location.origin
+        const jsonpath = await fetch(origin+jsonmap+".json"); 
+        const json = await jsonpath.json();
+        return json;
+    };
+    getjsonmap().then((jsonmap) =>{  
+      function makechannel(){
+      let jsonpath = jsonmap.split("\n");  
+      let channel = document.getElementById("channel");
+      for (let i = 0; i<jsonpath.length; i++){
+       const newchannel = document.createElement("input");
+       newchannel.id = String(jsonpath[i].slice(1));
+       newchannel.type = "button";
+       newchannel.value = String(jsonpath[i].slice(1));
+       newchannel.onclick= function(){selectchannel(newchannel.id)};
+       channel.appendChild(newchannel);
+       }; }; //end makechannel
+
+      function playvideo(videoid){
+      history.pushState(null, "", location.pathname + "/"+videoid);
+      const videopage = document.getElementById("videopage");
+      videopage.innerHTML=""
+      const player = document.createElement("video")
+      player.height=500
+      player.id=videoid
+      player.controls=true
+      videopage.appendChild(player)
+      const video = document.getElementById(videoid);
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(location.href+".m3u8");       // ← ここで変数を使う
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        video.play();
+        });
+       }};
+
+
+      
+      makechannel();
+       function selectchannel(channel){
+         newchannel = document.getElementById("channel");
+         newchannel.hidden = true;
+         getjson("/"+channel).then((json) =>{
+            history.pushState(null, "", "/"+channel);
+            let videopage = document.getElementById("videopage");
+            selectsort = document.createElement("select");
+            selectsort.id = "selectsort";
+            selectsort.innerHTML = '<option value="0" selected>投稿日順</option><option value="1">再生回数順</option>';
+            videopage.appendChild(selectsort);
+            button = document.createElement("input");
+            button.type = "button";
+            button.value = "戻る";
+            button.onclick = function(){backchannel()}
+            videopage.appendChild(button);
+            function backchannel(){
+              videopage.innerHTML="";
+              newchannel.hidden = false;
+            }
+            function sortByViews(){
+              return json.sort((a, b) =>  (b.video_aggregate_info?.total_views ?? 0) - (a.video_aggregate_info?.total_views ?? 0));
+            };
+            function sortByDate(){
+              return json.sort((a, b) =>new Date(b.display_date) - new Date(a.display_date));
+            };
+          
+ 
+            function seelist(sortjson){
+              videopage.innerHTML = "";
+              videopage.appendChild(selectsort);
+              videopage.appendChild(button)
+              for (let i = 0; i<json.length; i++){
+                let video = document.createElement("div");
+                video.onclick = function(){playvideo(String(json[i].content_code))}
+                video.textContent = String(sortjson[i].title);
+                videopage.appendChild(video);
+                const thumbnail = document.createElement("img");
+                thumbnail.src = String(sortjson[i].thumbnail_url);
+                video.appendChild(thumbnail);
+              }
+            }; 
+           
+            var selectsort = document.getElementById("selectsort");
+            selectsort.onchange = function(){
+              if(this.value == 1){seelist(sortByViews())};
+              if(this.value == 0){seelist(sortByDate())};
+            };//end 
+         seelist(sortByDate());
+        }); //getjson
+       }//selectchannel       
+    });
+  </script>
+
+
+
+</body>
+
+</html>
