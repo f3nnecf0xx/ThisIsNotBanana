@@ -53,13 +53,13 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/0.5.14/hls.min.js"></script>
   <script> 
     async function getjsonmap() {
-      const origin = location.helf
+      const origin = location.href
       const res = await fetch(origin+"/jsonmap.txt");
       const jsonmap = await res.text(); 
       return jsonmap;
     };
     async function getjson(jsonmap) {
-        const origin = location.helf
+        const origin = location.href
         const jsonpath = await fetch(origin+jsonmap+".json"); 
         const json = await jsonpath.json();
         return json;
