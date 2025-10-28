@@ -102,7 +102,7 @@
          newchannel = document.getElementById("channel");
          newchannel.hidden = true;
          getjson("/"+channel).then((json) =>{
-            history.pushState(null, "", "/"+channel);
+            history.pushState(null, "", location.pathname+channel);
             let videopage = document.getElementById("videopage");
             selectsort = document.createElement("select");
             selectsort.id = "selectsort";
